@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # The build compiles everything and runs the Catch2 unit tests as a
+      # gating step inside the Dockerfile — this is the reproducibility proof.
+      - name: Build Docker image (compiles + runs unit tests)
+        run: docker build -t <your-gh-username>/resize-service:ci .
+
+      - name: Smoke test the running container
+        run: |
+          docker run -d --rm -p 8080:8080 --name resize-service \
+            <your-gh-username>/resize-service:ci
+          sleep 3
+
+          # invalid JSON must yield the 400 error contract
+          status=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            -X POST http://localhost:8080/resize_image \
+            -H 'Content-Type: application/json' -d '{not json')
+          cat /tmp/resp.json; echo
+          test "$status" = "400"
+          grep -q '"Message"' /tmp/resp.json
+
+          docker stop resize-service

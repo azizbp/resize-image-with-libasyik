@@ -1,0 +1,3 @@
+[submodule "third_party/libasyik"]
+	path = third_party/libasyik
+	url = https://github.com/okyfirmansyah/libasyik
