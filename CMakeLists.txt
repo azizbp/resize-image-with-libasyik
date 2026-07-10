@@ -33,11 +33,12 @@ target_link_libraries(resize_core PUBLIC
 )
 
 add_executable(resize_image_server src/main.cpp)
-# libasyik's public headers include aixlog.hpp, but libasyik only exposes that
-# include path to installed consumers — add it explicitly for the
-# add_subdirectory() case
+# libasyik's public headers include aixlog.hpp and cppcodec/*, but libasyik
+# only exposes those include paths to installed consumers
+# add them explicitly for the add_subdirectory() case
 target_include_directories(resize_image_server PRIVATE
-    third_party/libasyik/external/aixlog/include)
+    third_party/libasyik/external/aixlog/include
+    third_party/libasyik/external/cppcodec)
 target_link_libraries(resize_image_server PRIVATE resize_core libasyik)
 
 if(BUILD_TESTS)
