@@ -40,8 +40,9 @@ echo "=== 2. error cases: must return 4xx with capital-M \"Message\" ==="
 
 check_error() {
     local name="$1" payload="$2" expected="$3" code
+    printf '%s' "$payload" > /tmp/error_payload.json
     code=$(curl -s -o /tmp/response.json -w "%{http_code}" -X POST "$URL" \
-        -H 'Content-Type: application/json' -d "$payload")
+        -H 'Content-Type: application/json' -d @/tmp/error_payload.json)
     echo "-- $name -> HTTP $code: $(cat /tmp/response.json)"
     test "$code" = "$expected"
     jq -e 'has("Message") and (has("message") | not)' /tmp/response.json >/dev/null
