@@ -16,12 +16,12 @@ jobs:
       # The build compiles everything and runs the Catch2 unit tests as a
       # gating step inside the Dockerfile — this is the reproducibility proof.
       - name: Build Docker image (compiles + runs unit tests)
-        run: docker build -t <your-gh-username>/resize-service:ci .
+        run: docker build -t azizbp/resize-image-with-libasyik:ci .
 
       - name: Smoke test the running container
         run: |
           docker run -d --rm -p 8080:8080 --name resize-service \
-            <your-gh-username>/resize-service:ci
+            azizbp/resize-image-with-libasyik:ci
           sleep 3
 
           # invalid JSON must yield the 400 error contract
