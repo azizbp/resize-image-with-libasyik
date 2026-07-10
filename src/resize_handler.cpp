@@ -15,7 +15,7 @@ namespace
 {
 using nlohmann::json;
 
-// Sane upper bound on output dimensions to avoid excessive memory use
+// set a maximum dimension to avoid OOM errors on large images
 constexpr int kMaxDimension = 8192;
 
 // Exception carrying the HTTP status of a client (4xx) error; anything
@@ -28,6 +28,7 @@ struct client_error : std::runtime_error {
   }
 };
 
+// helper function to generate a JSON error
 handler_result error_response(int status, const std::string &message)
 {
   // Failure contract uses capital-M "Message"
@@ -35,35 +36,51 @@ handler_result error_response(int status, const std::string &message)
   return {status, body.dump()};
 }
 
+// helper function to validate target dimensions
 int get_positive_dimension(const json &request, const char *field)
 {
+  // check field is exists
   if (!request.contains(field))
     throw client_error(400, std::string("missing field: ") + field);
   const auto &value = request.at(field);
+
+  // check valid integer dimensions
   if (!value.is_number_integer())
     throw client_error(400, std::string(field) + " must be an integer");
   int dimension = value.get<int>();
+
+  // check positive
   if (dimension <= 0)
     throw client_error(400, std::string(field) + " must be positive");
+
+  // check dimension is not too large
   if (dimension > kMaxDimension)
     throw client_error(400, std::string(field) + " must be <= " +
                                 std::to_string(kMaxDimension));
   return dimension;
 }
-}  // namespace
+}
 
+// handling resize request
 handler_result handle_resize_request(const std::string &request_body)
 {
   try {
+    // json parsing
     json request = json::parse(request_body, nullptr, /*allow_exceptions=*/false);
+
+    // check valid json object
     if (request.is_discarded() || !request.is_object())
       throw client_error(400, "request body is not a valid JSON object");
 
+    // check valid string input
     if (!request.contains("input_jpeg") || !request.at("input_jpeg").is_string())
       throw client_error(400, "missing or non-string field: input_jpeg");
+
+    // check valid integer dimensions
     int width = get_positive_dimension(request, "desired_width");
     int height = get_positive_dimension(request, "desired_height");
 
+    // check valid base64 input and decode jpeg bytes
     std::vector<std::uint8_t> jpeg_bytes;
     try {
       jpeg_bytes = base64::decode(request.at("input_jpeg").get<std::string>());
@@ -72,13 +89,18 @@ handler_result handle_resize_request(const std::string &request_body)
                          std::string("input_jpeg is not valid base64: ") + e.what());
     }
 
+    // decode jpeg bytes into cv::Mat
     cv::Mat image = image_ops::decode(jpeg_bytes);
     if (image.empty())
       throw client_error(400, "input_jpeg is not a decodable image");
 
+    // resize
     cv::Mat resized = image_ops::resize(image, width, height);
+
+    // encode back to jpeg bytes
     std::vector<std::uint8_t> output_bytes = image_ops::encode_jpeg(resized);
 
+    // encode base64 and return json response
     json response = {{"code", 200},
                      {"message", "success"},
                      {"output_jpeg", base64::encode(output_bytes)}};

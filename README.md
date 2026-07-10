@@ -2,8 +2,7 @@
 
 A small C++17 HTTP microservice that resizes a base64-encoded JPEG to a target
 dimension. Built with [libasyik](https://github.com/okyfirmansyah/libasyik)
-(Boost.Asio/Beast/Fiber), OpenCV, and nlohmann/json for the **Nodeflux C++
-Software Engineer technical assessment (Task 1)**.
+(Boost.Asio/Beast/Fiber), OpenCV, and nlohmann/json.
 
 ## API
 
